@@ -1,0 +1,223 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Rendimiento de Modelos</h1>
+    <button
+      (click)="openModal()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      Agregar Modelo
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex justify-center items-center py-12">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+
+  <!-- Grid de modelos -->
+  <div *ngIf="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let model of models" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">{{ model.nombre }}</h3>
+        <span *ngIf="model.optimizado" class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+          Optimizado
+        </span>
+      </div>
+      
+      <div class="space-y-3">
+        <div class="flex justify-between">
+          <span class="text-sm text-gray-600">Formato:</span>
+          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+            {{ model.formato }}
+          </span>
+        </div>
+        
+        <div *ngIf="model.score" class="flex justify-between">
+          <span class="text-sm text-gray-600">Score:</span>
+          <span [class]="getScoreBadgeColor(model.score)" class="px-2 py-1 text-xs font-semibold rounded-full">
+            {{ (model.score * 100) | number:'1.1-1' }}%
+          </span>
+        </div>
+        
+        <div *ngIf="model.precision" class="flex justify-between">
+          <span class="text-sm text-gray-600">Precisión:</span>
+          <span class="text-sm font-medium text-gray-900">
+            {{ (model.precision * 100) | number:'1.1-1' }}%
+          </span>
+        </div>
+        
+        <div *ngIf="model.recall" class="flex justify-between">
+          <span class="text-sm text-gray-600">Recall:</span>
+          <span class="text-sm font-medium text-gray-900">
+            {{ (model.recall * 100) | number:'1.1-1' }}%
+          </span>
+        </div>
+        
+        <div *ngIf="model.dataset" class="flex justify-between">
+          <span class="text-sm text-gray-600">Dataset:</span>
+          <span class="text-sm font-medium text-gray-900">{{ model.dataset }}</span>
+        </div>
+        
+        <div *ngIf="model.fecha_entrenamiento" class="flex justify-between">
+          <span class="text-sm text-gray-600">Entrenado:</span>
+          <span class="text-sm font-medium text-gray-900">
+            {{ model.fecha_entrenamiento | date:'dd/MM/yyyy' }}
+          </span>
+        </div>
+      </div>
+      
+      <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+        <button
+          (click)="openModal(model)"
+          class="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-900"
+        >
+          Editar
+        </button>
+        <button
+          (click)="deleteModel(model.id)"
+          class="px-3 py-1 text-sm text-red-600 hover:text-red-900"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sin resultados -->
+  <div *ngIf="!loading && models.length === 0" class="text-center py-12">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">No hay modelos registrados</h3>
+    <p class="mt-1 text-sm text-gray-500">Comienza agregando un nuevo modelo.</p>
+  </div>
+</div>
+
+<!-- Modal -->
+<div *ngIf="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">
+        {{ editingModel ? 'Editar Modelo' : 'Agregar Modelo' }}
+      </h3>
+      
+      <form (ngSubmit)="saveModel()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del Modelo</label>
+          <input
+            type="text"
+            [(ngModel)]="currentModel.nombre"
+            name="nombre"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Formato</label>
+          <select
+            [(ngModel)]="currentModel.formato"
+            name="formato"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Seleccionar formato...</option>
+            <option value="TensorFlow">TensorFlow</option>
+            <option value="PyTorch">PyTorch</option>
+            <option value="ONNX">ONNX</option>
+            <option value="Scikit-learn">Scikit-learn</option>
+            <option value="Keras">Keras</option>
+          </select>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Score (0-1)</label>
+            <input
+              type="number"
+              [(ngModel)]="currentModel.score"
+              name="score"
+              min="0"
+              max="1"
+              step="0.01"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Precisión (0-1)</label>
+            <input
+              type="number"
+              [(ngModel)]="currentModel.precision"
+              name="precision"
+              min="0"
+              max="1"
+              step="0.01"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Recall (0-1)</label>
+            <input
+              type="number"
+              [(ngModel)]="currentModel.recall"
+              name="recall"
+              min="0"
+              max="1"
+              step="0.01"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Dataset</label>
+          <input
+            type="text"
+            [(ngModel)]="currentModel.dataset"
+            name="dataset"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Entrenamiento</label>
+          <input
+            type="datetime-local"
+            [(ngModel)]="currentModel.fecha_entrenamiento"
+            name="fecha_entrenamiento"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            [(ngModel)]="currentModel.optimizado"
+            name="optimizado"
+            id="optimizado"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label for="optimizado" class="ml-2 block text-sm text-gray-900">Modelo Optimizado</label>
+        </div>
+        
+        <div class="flex justify-end gap-3 pt-4">
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            {{ editingModel ? 'Actualizar' : 'Crear' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
